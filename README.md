@@ -55,6 +55,28 @@ I have conducted a technical audit of several leading public repositories and pa
 
 ---
 
+## 📓 Notebooks & Colab Setup
+
+For research, training, and further fine-tuning, the following notebooks are included in the `/research` directory.
+
+### 1. `embryo_classification.ipynb` (Phase 1)
+- **Purpose**: Training the developmental stage classifier.
+- **How to run**:
+    1. Upload to [Google Colab](https://colab.research.google.com/).
+    2. Set runtime to **GPU (T4)**.
+    3. Run all cells to download the Zenodo dataset and train the MobileNetV2 Turbo model.
+- **Output**: Generates `embryo_model_turbo.h5`. Save this to the root directory for the app to function.
+
+### 2. `embryo_research_malpani.ipynb` (Phase 2)
+- **Purpose**: Clinical Gardner grading research and v4.0 training.
+- **How to run**:
+    1. Upload to Colab.
+    2. Ensure the **Blasto2K dataset** is available in your Drive or environment.
+    3. Run the "V4 Supervised Protocol" cells.
+- **Output**: Generates `embryo_grading_v4.pth`. This is the core weight file for the clinical grading engine.
+
+---
+
 ## 🚀 Next Steps
 1. **Clinic Fine-tuning**: Ingest Malpani internal data to move beyond public benchmarks.
 2. **Implantation Research**: Correlate morphology with historical pregnancy outcome data.
