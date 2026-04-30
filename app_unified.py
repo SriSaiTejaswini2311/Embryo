@@ -5,6 +5,7 @@ from PIL import Image
 import numpy as np
 
 # Import our custom predictors
+from predict_validator import EmbryoValidator
 from predict_module import EmbryoClassifier
 from predict_malpani import EmbryoPredictor
 
@@ -108,6 +109,24 @@ st.markdown("""
         margin-bottom: 2rem;
         font-weight: 600;
     }
+
+    .success-badge {
+        background: rgba(100, 255, 218, 0.1);
+        color: #64ffda;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        border: 1px solid rgba(100, 255, 218, 0.3);
+    }
+
+    .error-badge {
+        background: rgba(255, 75, 75, 0.1);
+        color: #ff4b4b;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        border: 1px solid rgba(255, 75, 75, 0.3);
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -122,47 +141,107 @@ st.markdown('''
 # --- Session State ---
 if 'analysis_done' not in st.session_state:
     st.session_state.analysis_done = False
+if 'trigger_scan' not in st.session_state:
+    st.session_state.trigger_scan = False
+if 'use_sample' not in st.session_state:
+    st.session_state.use_sample = None
 
 # --- Layout ---
 col_up, col_res = st.columns([1, 2], gap="large")
 
 with col_up:
-    st.markdown("### 📤 Image Ingestion")
+    st.markdown("### 🧪 Quick Start: Try a Sample")
+    samp1, samp2, samp3, samp4 = st.columns(4)
+    with samp1:
+        st.image("sample_images/2_cell_sample.jpeg", caption="Cleavage")
+        if st.button("Test 1", key="btn1", use_container_width=True):
+            st.session_state.use_sample = "sample_images/2_cell_sample.jpeg"
+            st.session_state.trigger_scan = True
+    with samp2:
+        st.image("sample_images/morula_sample.jpeg", caption="Morula")
+        if st.button("Test 2", key="btn2", use_container_width=True):
+            st.session_state.use_sample = "sample_images/morula_sample.jpeg"
+            st.session_state.trigger_scan = True
+    with samp3:
+        st.image("sample_images/blastocyst_good.png", caption="Good Blasto")
+        if st.button("Test 3", key="btn3", use_container_width=True):
+            st.session_state.use_sample = "sample_images/blastocyst_good.png"
+            st.session_state.trigger_scan = True
+    with samp4:
+        st.image("sample_images/blastocyst_poor.png", caption="Poor Blasto")
+        if st.button("Test 4", key="btn4", use_container_width=True):
+            st.session_state.use_sample = "sample_images/blastocyst_poor.png"
+            st.session_state.trigger_scan = True
+            
+    st.markdown("<br>### 📤 Image Ingestion", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("Upload Embryo Micrograph", type=["jpg", "jpeg", "png"])
     
+    img_to_scan = None
     if uploaded_file:
-        img = Image.open(uploaded_file)
-        st.image(img, caption="Patient Sample", use_container_width=True)
+        img_to_scan = Image.open(uploaded_file)
+        st.session_state.use_sample = None # Clear sample if manual upload
+    elif st.session_state.use_sample:
+        img_to_scan = Image.open(st.session_state.use_sample)
         
-        if st.button("🚀 RUN FULL DIAGNOSTIC SCAN", use_container_width=True):
-            with st.spinner("Executing Multi-Model Audit..."):
+    if img_to_scan:
+        st.image(img_to_scan, caption="Patient Sample", use_container_width=True)
+        
+        run_clicked = st.button("🚀 RUN FULL DIAGNOSTIC SCAN", use_container_width=True)
+        
+        if run_clicked or st.session_state.trigger_scan:
+            st.session_state.trigger_scan = False # Reset trigger
+            with st.spinner("Validating Input & Executing Audit..."):
                 # Save temp file
                 temp_path = "current_sample.png"
-                img.save(temp_path)
+                img_to_scan.save(temp_path)
                 
-                # Model 1: Stage Classification (MobileNetV2 Turbo)
-                classifier = EmbryoClassifier(model_path="embryo_model_turbo.h5")
-                stage, stage_conf, _ = classifier.predict(temp_path)
+                # --- STAGE 0: VALIDATION ---
+                validator = EmbryoValidator(model_path="embryo_validator_model.h5")
+                is_valid, val_conf = validator.validate(temp_path)
                 
-                # Model 2: Quality Grading (EfficientNet-B0 Supervised)
-                # Only if it's a Blastocyst
-                grading_res = None
-                if stage == "Blastocyst":
-                    grader = EmbryoPredictor(model_path="embryo_grading_v4.pth")
-                    full_grade, grading_res = grader.predict(temp_path)
-                
-                st.session_state.results = {
-                    "stage": stage,
-                    "stage_conf": stage_conf,
-                    "grading": grading_res,
-                    "img_path": temp_path
-                }
+                if not is_valid:
+                    st.session_state.results = {
+                        "is_valid": False,
+                        "val_conf": val_conf,
+                        "img_path": temp_path
+                    }
+                else:
+                    # Model 1: Stage Classification (MobileNetV2 Turbo)
+                    classifier = EmbryoClassifier(model_path="embryo_model_turbo.h5")
+                    stage, stage_conf, _ = classifier.predict(temp_path)
+                    
+                    # Model 2: Quality Grading (EfficientNet-B0 Supervised)
+                    grading_res = None
+                    if stage == "Blastocyst":
+                        grader = EmbryoPredictor(model_path="embryo_grading_v4.pth")
+                        full_grade, grading_res = grader.predict(temp_path)
+                    
+                    st.session_state.results = {
+                        "is_valid": True,
+                        "val_conf": val_conf,
+                        "stage": stage,
+                        "stage_conf": stage_conf,
+                        "grading": grading_res,
+                        "img_path": temp_path
+                    }
                 st.session_state.analysis_done = True
 
 with col_res:
     if st.session_state.analysis_done:
         res = st.session_state.results
         
+        # 0. Validation Badge
+        if res['is_valid']:
+            st.markdown(f'<span class="success-badge">✅ Valid Embryo Image ({res["val_conf"]:.1%})</span>', unsafe_allow_html=True)
+        else:
+            st.markdown(f'<span class="error-badge">❌ Invalid Input ({res["val_conf"]:.1%})</span>', unsafe_allow_html=True)
+            st.markdown('''
+            <div class="warning-banner" style="margin-top:20px;">
+                🚨 REJECTION: Uploaded image does not appear to be a valid embryo microscope image. Please upload a high-resolution micrograph.
+            </div>
+            ''', unsafe_allow_html=True)
+            st.stop()
+
         # 1. Warning System
         if res['grading'] and res['grading']['low_confidence']:
             st.markdown('''
@@ -243,3 +322,31 @@ with col_res:
             <div style="color: #8892b0;">Waiting for image upload to begin analysis...</div>
         </div>
         ''', unsafe_allow_html=True)
+
+# --- Educational Gallery ---
+st.divider()
+st.markdown("## 📚 Reference Gallery: Examples & Expected Outputs")
+st.markdown("Use this reference guide to understand the AI's grading logic and visual focus areas.")
+
+g1, g2, g3 = st.columns(3)
+with g1:
+    st.image("sample_images/2_cell_sample.jpeg", use_container_width=True)
+    st.markdown("""
+    **Stage Prediction:** 2-Cell / 4-Cell  
+    **Grading:** N/A (Cleavage stage)  
+    **Explanation:** Early-stage cleavage embryos are evaluated on division symmetry and fragmentation, rather than Gardner criteria.
+    """)
+with g2:
+    st.image("sample_images/blastocyst_good.png", use_container_width=True)
+    st.markdown("""
+    **Stage Prediction:** Blastocyst  
+    **Expected Grading:** 4AA / 5AA (High Quality)  
+    **Explanation:** The AI detects a fully expanded blastocoel with a prominent, tightly packed Inner Cell Mass (ICM) and a cohesive Trophectoderm (TE) layer.
+    """)
+with g3:
+    st.image("sample_images/blastocyst_poor.png", use_container_width=True)
+    st.markdown("""
+    **Stage Prediction:** Blastocyst  
+    **Expected Grading:** 3CC / 4CC (Poor Quality)  
+    **Explanation:** The Grad-CAM heatmap will highlight sparse/loose cells in the ICM and irregular TE cells, resulting in a lower confidence score and 'C' grades.
+    """)
