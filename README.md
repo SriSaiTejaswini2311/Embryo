@@ -5,6 +5,7 @@
 ## 📋 Project Objective
 Develop a production-grade clinical AI for automated embryo developmental staging and Gardner quality grading.
 
+- **Phase 0**: Image Validation Gatekeeper (MobileNetV2 Binary Classifier).
 - **Phase 1**: Developmental stage classification (Turbo MobileNetV2).
 - **Phase 2**: Clinical quality grading (Supervised EfficientNet-B0 v4.0).
 - **Goal**: Provide a high-confidence decision-support tool for embryologists.
@@ -58,6 +59,14 @@ I have conducted a technical audit of several leading public repositories and pa
 ## 📓 Notebooks & Colab Setup
 
 For research, training, and further fine-tuning, the following notebooks are included in the `/research` directory.
+
+### 0. `embryo_validator.ipynb` (Phase 0)
+- **Purpose**: Training the image validation gatekeeper model (MobileNetV2 binary classifier).
+- **How to run**:
+    1. Upload to Colab.
+    2. Provide positive/negative images.
+    3. Run all cells to generate the gatekeeper model.
+- **Output**: Generates `embryo_validator_model.h5`.
 
 ### 1. `embryo_classification.ipynb` (Phase 1)
 - **Purpose**: Training the developmental stage classifier.
