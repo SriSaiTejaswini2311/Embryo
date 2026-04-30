@@ -5,7 +5,6 @@ from PIL import Image
 import numpy as np
 
 # Import our custom predictors
-from predict_validator import EmbryoValidator
 from predict_module import EmbryoClassifier
 from predict_malpani import EmbryoPredictor
 
@@ -190,57 +189,34 @@ with col_up:
         
         if run_clicked or st.session_state.trigger_scan:
             st.session_state.trigger_scan = False # Reset trigger
-            with st.spinner("Validating Input & Executing Audit..."):
+            with st.spinner("Running Multi-Model Diagnostic Scan..."):
                 # Save temp file
                 temp_path = "current_sample.png"
                 img_to_scan.save(temp_path)
-                
-                # --- STAGE 0: VALIDATION ---
-                validator = EmbryoValidator(model_path="embryo_validator_model.h5")
-                is_valid, val_conf = validator.validate(temp_path)
-                
-                if not is_valid:
-                    st.session_state.results = {
-                        "is_valid": False,
-                        "val_conf": val_conf,
-                        "img_path": temp_path
-                    }
-                else:
-                    # Model 1: Stage Classification (MobileNetV2 Turbo)
-                    classifier = EmbryoClassifier(model_path="embryo_model_turbo.h5")
-                    stage, stage_conf, _ = classifier.predict(temp_path)
-                    
-                    # Model 2: Quality Grading (EfficientNet-B0 Supervised)
-                    grading_res = None
-                    if stage == "Blastocyst":
-                        grader = EmbryoPredictor(model_path="embryo_grading_v4.pth")
-                        full_grade, grading_res = grader.predict(temp_path)
-                    
-                    st.session_state.results = {
-                        "is_valid": True,
-                        "val_conf": val_conf,
-                        "stage": stage,
-                        "stage_conf": stage_conf,
-                        "grading": grading_res,
-                        "img_path": temp_path
-                    }
+
+                # Model 1: Stage Classification (MobileNetV2 Turbo)
+                classifier = EmbryoClassifier(model_path="embryo_model_turbo.h5")
+                stage, stage_conf, _ = classifier.predict(temp_path)
+
+                # Model 2: Quality Grading (EfficientNet-B0 v4.0)
+                # Only triggered automatically if a Blastocyst is detected
+                grading_res = None
+                if stage == "Blastocyst":
+                    grader = EmbryoPredictor(model_path="embryo_grading_v4.pth")
+                    full_grade, grading_res = grader.predict(temp_path)
+
+                st.session_state.results = {
+                    "stage": stage,
+                    "stage_conf": stage_conf,
+                    "grading": grading_res,
+                    "img_path": temp_path
+                }
                 st.session_state.analysis_done = True
 
 with col_res:
     if st.session_state.analysis_done:
         res = st.session_state.results
-        
-        # 0. Validation Badge
-        if res['is_valid']:
-            st.markdown(f'<span class="success-badge">✅ Valid Embryo Image ({res["val_conf"]:.1%})</span>', unsafe_allow_html=True)
-        else:
-            st.markdown(f'<span class="error-badge">❌ Invalid Input ({res["val_conf"]:.1%})</span>', unsafe_allow_html=True)
-            st.markdown('''
-            <div class="warning-banner" style="margin-top:20px;">
-                🚨 REJECTION: Uploaded image does not appear to be a valid embryo microscope image. Please upload a high-resolution micrograph.
-            </div>
-            ''', unsafe_allow_html=True)
-            st.stop()
+
 
         # 1. Warning System
         if res['grading'] and res['grading']['low_confidence']:
