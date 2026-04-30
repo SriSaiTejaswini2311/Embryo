@@ -1,328 +1,460 @@
 import streamlit as st
 import os
-import time
 from PIL import Image
 import numpy as np
 
-# Import our custom predictors
 from predict_module import EmbryoClassifier
 from predict_malpani import EmbryoPredictor
 
-# --- Page Configuration ---
 st.set_page_config(
-    page_title="Embryo AI - Clinical Diagnostic Suite",
+    page_title="Embryo AI — Clinical Diagnostic Suite",
     page_icon="🔬",
     layout="wide"
 )
 
-# --- Custom Styling (Premium Dark Mode) ---
+# ──────────────────────────────────────────────────────────────
+#  GLOBAL CSS  (premium dark, custom buttons, every element)
+# ──────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap');
-    
-    .stApp {
-        background: radial-gradient(circle at top right, #0a192f, #020c1b);
-        color: #e6f1ff;
-        font-family: 'Outfit', sans-serif;
-    }
-    
-    .main-header {
-        text-align: center;
-        padding: 2rem 0;
-        background: rgba(10, 25, 47, 0.8);
-        backdrop-filter: blur(20px);
-        border-bottom: 1px solid rgba(100, 255, 218, 0.1);
-        margin-bottom: 3rem;
-        border-radius: 0 0 30px 30px;
-    }
-    
-    .title-gradient {
-        font-size: 3rem;
-        font-weight: 800;
-        letter-spacing: -1.5px;
-        background: linear-gradient(135deg, #64ffda 0%, #48bfe3 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 0;
-    }
-    
-    .subtitle {
-        color: #8892b0;
-        font-size: 0.9rem;
-        letter-spacing: 3px;
-        text-transform: uppercase;
-        margin-top: 5px;
-    }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-    .report-container {
-        background: rgba(17, 34, 64, 0.4);
-        border: 1px solid rgba(100, 255, 218, 0.1);
-        border-radius: 24px;
-        padding: 2.5rem;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-    }
-    
-    .metric-card {
-        background: rgba(2, 12, 27, 0.6);
-        border: 1px solid rgba(100, 255, 218, 0.05);
-        border-radius: 16px;
-        padding: 1.5rem;
-        text-align: center;
-    }
-    
-    .metric-value {
-        font-size: 2.2rem;
-        font-weight: 700;
-        color: #64ffda;
-        line-height: 1;
-    }
-    
-    .metric-label {
-        font-size: 0.75rem;
-        color: #8892b0;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-top: 10px;
-    }
-    
-    .conf-bar-bg {
-        height: 8px;
-        background: #112240;
-        border-radius: 4px;
-        margin-top: 12px;
-        overflow: hidden;
-    }
-    
-    .conf-bar-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #64ffda, #48bfe3);
-        border-radius: 4px;
-    }
-    
-    .warning-banner {
-        background: rgba(255, 75, 75, 0.1);
-        border-left: 5px solid #ff4b4b;
-        color: #ff4b4b;
-        padding: 1rem;
-        border-radius: 8px;
-        margin-bottom: 2rem;
-        font-weight: 600;
-    }
+/* ── Base ── */
+html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
+.stApp {
+    background: linear-gradient(135deg, #020c1b 0%, #0a192f 60%, #0d2137 100%);
+    color: #ccd6f6;
+    min-height: 100vh;
+}
+/* hide hamburger & footer */
+#MainMenu, footer { visibility: hidden; }
 
-    .success-badge {
-        background: rgba(100, 255, 218, 0.1);
-        color: #64ffda;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        border: 1px solid rgba(100, 255, 218, 0.3);
-    }
+/* ── Header ── */
+.hero {
+    text-align: center;
+    padding: 3rem 2rem 2.5rem;
+    background: linear-gradient(180deg, rgba(10,25,47,0.95) 0%, rgba(2,12,27,0) 100%);
+    border-bottom: 1px solid rgba(100,255,218,0.07);
+    margin-bottom: 2.5rem;
+}
+.hero-eyebrow {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: #64ffda;
+    margin-bottom: 0.5rem;
+}
+.hero-title {
+    font-size: 3.2rem;
+    font-weight: 800;
+    letter-spacing: -1.5px;
+    background: linear-gradient(90deg, #e6f1ff 0%, #64ffda 60%, #48bfe3 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1.1;
+    margin: 0;
+}
+.hero-sub {
+    font-size: 0.88rem;
+    color: #8892b0;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 0.6rem;
+}
 
-    .error-badge {
-        background: rgba(255, 75, 75, 0.1);
-        color: #ff4b4b;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        border: 1px solid rgba(255, 75, 75, 0.3);
-    }
+/* ── Section headings ── */
+.section-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #64ffda;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(100,255,218,0.12);
+}
+
+/* ── Sample thumbnails ── */
+.sample-card {
+    background: rgba(17,34,64,0.6);
+    border: 1px solid rgba(100,255,218,0.08);
+    border-radius: 14px;
+    padding: 10px;
+    text-align: center;
+    transition: border-color 0.2s, transform 0.2s;
+}
+.sample-card:hover { border-color: rgba(100,255,218,0.35); transform: translateY(-3px); }
+.sample-label {
+    font-size: 0.72rem;
+    color: #8892b0;
+    margin-top: 6px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+/* ── ALL Streamlit buttons → teal pill style ── */
+.stButton > button {
+    background: linear-gradient(135deg, #0d7377 0%, #14a085 100%) !important;
+    color: #e6f1ff !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.5px !important;
+    padding: 0.45rem 0.8rem !important;
+    cursor: pointer !important;
+    transition: all 0.2s !important;
+    box-shadow: 0 4px 15px rgba(13,115,119,0.4) !important;
+    width: 100% !important;
+}
+.stButton > button:hover {
+    background: linear-gradient(135deg, #14a085 0%, #64ffda 100%) !important;
+    color: #020c1b !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 20px rgba(100,255,218,0.35) !important;
+}
+
+/* ── Primary CTA button ── */
+div[data-testid="stButton"] > button[kind="primary"],
+.cta-btn > button {
+    background: linear-gradient(135deg, #1de9b6 0%, #1976d2 100%) !important;
+    font-size: 0.9rem !important;
+    font-weight: 700 !important;
+    padding: 0.7rem 1.2rem !important;
+    border-radius: 12px !important;
+    box-shadow: 0 6px 24px rgba(29,233,182,0.3) !important;
+    letter-spacing: 1px !important;
+}
+
+/* ── Left panel ── */
+.left-panel {
+    background: rgba(10,25,47,0.55);
+    border: 1px solid rgba(100,255,218,0.06);
+    border-radius: 24px;
+    padding: 1.6rem;
+    backdrop-filter: blur(12px);
+}
+
+/* ── File uploader ── */
+[data-testid="stFileUploader"] {
+    background: rgba(17,34,64,0.5) !important;
+    border: 1.5px dashed rgba(100,255,218,0.2) !important;
+    border-radius: 14px !important;
+    padding: 1rem !important;
+}
+[data-testid="stFileUploader"]:hover {
+    border-color: rgba(100,255,218,0.5) !important;
+}
+
+/* ── Report card ── */
+.report-card {
+    background: rgba(13,24,48,0.7);
+    border: 1px solid rgba(100,255,218,0.1);
+    border-radius: 24px;
+    padding: 2.2rem;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+    backdrop-filter: blur(10px);
+}
+
+/* ── Metric tiles ── */
+.metric-tile {
+    background: rgba(2,12,27,0.8);
+    border: 1px solid rgba(100,255,218,0.08);
+    border-radius: 18px;
+    padding: 1.4rem 1rem;
+    text-align: center;
+    transition: border-color 0.2s;
+}
+.metric-tile:hover { border-color: rgba(100,255,218,0.25); }
+.metric-val {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #64ffda;
+    line-height: 1;
+    margin-bottom: 6px;
+}
+.metric-lbl {
+    font-size: 0.65rem;
+    color: #8892b0;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 600;
+}
+
+/* ── Confidence bars ── */
+.conf-row { margin-bottom: 14px; }
+.conf-title { font-size: 0.78rem; color: #ccd6f6; font-weight: 500; margin-bottom: 5px; display:flex; justify-content:space-between; }
+.conf-track { height: 7px; background: #112240; border-radius: 4px; overflow: hidden; }
+.conf-fill { height: 100%; background: linear-gradient(90deg, #0d7377, #64ffda); border-radius: 4px; transition: width 0.6s ease; }
+
+/* ── Warning banner ── */
+.warn-box {
+    background: rgba(255,85,85,0.08);
+    border-left: 4px solid #ff5555;
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    margin-bottom: 1.4rem;
+    color: #ff8080;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* ── Gallery cards ── */
+.gallery-card {
+    background: rgba(10,25,47,0.6);
+    border: 1px solid rgba(100,255,218,0.07);
+    border-radius: 20px;
+    padding: 1.2rem;
+    transition: border-color 0.25s, transform 0.25s;
+}
+.gallery-card:hover { border-color: rgba(100,255,218,0.3); transform: translateY(-4px); }
+.gallery-stage { font-size: 0.7rem; font-weight: 700; color: #64ffda; letter-spacing: 2px; text-transform: uppercase; margin-top: 10px; }
+.gallery-grade { font-size: 1.5rem; font-weight: 800; color: #e6f1ff; margin: 4px 0; }
+.gallery-explain { font-size: 0.78rem; color: #8892b0; line-height: 1.55; margin-top: 8px; }
+
+/* ── Divider ── */
+hr { border-color: rgba(100,255,218,0.06) !important; }
+
+/* ── Streamlit image caption ── */
+[data-testid="caption"] { color: #8892b0 !important; font-size: 0.72rem !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- Header ---
-st.markdown('''
-<div class="main-header">
-    <div class="title-gradient">EMBRYO AI ANALYTICS</div>
-    <div class="subtitle">Multi-Model Clinical Diagnostic Suite</div>
+# ══════════════════════════════════════════════════════════════
+#  HERO HEADER
+# ══════════════════════════════════════════════════════════════
+st.markdown("""
+<div class="hero">
+    <div class="hero-eyebrow">🔬 Powered by EfficientNet-B0 + MobileNetV2</div>
+    <div class="hero-title">Embryo AI Analytics</div>
+    <div class="hero-sub">Multi-Model Clinical Diagnostic Suite · Gardner Grading · Developmental Staging</div>
 </div>
-''', unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
-# --- Session State ---
-if 'analysis_done' not in st.session_state:
-    st.session_state.analysis_done = False
-if 'trigger_scan' not in st.session_state:
-    st.session_state.trigger_scan = False
-if 'use_sample' not in st.session_state:
-    st.session_state.use_sample = None
+# ══════════════════════════════════════════════════════════════
+#  SESSION STATE
+# ══════════════════════════════════════════════════════════════
+for key, val in [('analysis_done', False), ('trigger_scan', False), ('use_sample', None)]:
+    if key not in st.session_state:
+        st.session_state[key] = val
 
-# --- Layout ---
-col_up, col_res = st.columns([1, 2], gap="large")
+SAMPLES = {
+    "btn1": ("sample_images/2_cell_sample.jpeg",   "Cleavage Stage"),
+    "btn2": ("sample_images/morula_sample.jpeg",    "Morula Stage"),
+    "btn3": ("sample_images/blastocyst_good.png",   "Blastocyst · Good"),
+    "btn4": ("sample_images/blastocyst_poor.png",   "Blastocyst · Poor"),
+}
 
-with col_up:
-    st.markdown("### 🧪 Quick Start: Try a Sample")
-    samp1, samp2, samp3, samp4 = st.columns(4)
-    with samp1:
-        st.image("sample_images/2_cell_sample.jpeg", caption="Cleavage")
-        if st.button("Test 1", key="btn1", use_container_width=True):
-            st.session_state.use_sample = "sample_images/2_cell_sample.jpeg"
-            st.session_state.trigger_scan = True
-    with samp2:
-        st.image("sample_images/morula_sample.jpeg", caption="Morula")
-        if st.button("Test 2", key="btn2", use_container_width=True):
-            st.session_state.use_sample = "sample_images/morula_sample.jpeg"
-            st.session_state.trigger_scan = True
-    with samp3:
-        st.image("sample_images/blastocyst_good.png", caption="Good Blasto")
-        if st.button("Test 3", key="btn3", use_container_width=True):
-            st.session_state.use_sample = "sample_images/blastocyst_good.png"
-            st.session_state.trigger_scan = True
-    with samp4:
-        st.image("sample_images/blastocyst_poor.png", caption="Poor Blasto")
-        if st.button("Test 4", key="btn4", use_container_width=True):
-            st.session_state.use_sample = "sample_images/blastocyst_poor.png"
-            st.session_state.trigger_scan = True
-            
-    st.markdown("<br>### 📤 Image Ingestion", unsafe_allow_html=True)
-    uploaded_file = st.file_uploader("Upload Embryo Micrograph", type=["jpg", "jpeg", "png"])
-    
+# ══════════════════════════════════════════════════════════════
+#  LAYOUT
+# ══════════════════════════════════════════════════════════════
+col_left, col_right = st.columns([1, 2.2], gap="large")
+
+# ──────────────────────────────────────────────────────────────
+#  LEFT PANEL
+# ──────────────────────────────────────────────────────────────
+with col_left:
+    st.markdown('<div class="left-panel">', unsafe_allow_html=True)
+
+    # Quick-Start Samples
+    st.markdown('<div class="section-label">⚡ Quick Start · Try a Sample</div>', unsafe_allow_html=True)
+    r1, r2, r3, r4 = st.columns(4)
+    for col_widget, (key, (path, label)) in zip([r1, r2, r3, r4], SAMPLES.items()):
+        with col_widget:
+            if os.path.exists(path):
+                st.image(path, use_container_width=True)
+            st.markdown(f'<div class="sample-label">{label.split("·")[0].strip()}</div>', unsafe_allow_html=True)
+            if st.button("▶ Run", key=key, use_container_width=True):
+                st.session_state.use_sample = path
+                st.session_state.trigger_scan = True
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown('<div class="section-label">📤 Upload Your Image</div>', unsafe_allow_html=True)
+    uploaded_file = st.file_uploader("Drag & drop or browse", type=["jpg", "jpeg", "png"], label_visibility="collapsed")
+
     img_to_scan = None
     if uploaded_file:
         img_to_scan = Image.open(uploaded_file)
-        st.session_state.use_sample = None # Clear sample if manual upload
-    elif st.session_state.use_sample:
+        st.session_state.use_sample = None
+    elif st.session_state.use_sample and os.path.exists(st.session_state.use_sample):
         img_to_scan = Image.open(st.session_state.use_sample)
-        
+
     if img_to_scan:
-        st.image(img_to_scan, caption="Patient Sample", use_container_width=True)
-        
-        run_clicked = st.button("🚀 RUN FULL DIAGNOSTIC SCAN", use_container_width=True)
-        
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.image(img_to_scan, caption="Loaded Sample", use_container_width=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        run_clicked = st.button("🚀  RUN DIAGNOSTIC SCAN", use_container_width=True)
+
         if run_clicked or st.session_state.trigger_scan:
-            st.session_state.trigger_scan = False # Reset trigger
-            with st.spinner("Running Multi-Model Diagnostic Scan..."):
-                # Save temp file
+            st.session_state.trigger_scan = False
+            with st.spinner("Running multi-model analysis…"):
                 temp_path = "current_sample.png"
                 img_to_scan.save(temp_path)
 
-                # Model 1: Stage Classification (MobileNetV2 Turbo)
                 classifier = EmbryoClassifier(model_path="embryo_model_turbo.h5")
                 stage, stage_conf, _ = classifier.predict(temp_path)
 
-                # Model 2: Quality Grading (EfficientNet-B0 v4.0)
-                # Only triggered automatically if a Blastocyst is detected
                 grading_res = None
                 if stage == "Blastocyst":
                     grader = EmbryoPredictor(model_path="embryo_grading_v4.pth")
-                    full_grade, grading_res = grader.predict(temp_path)
+                    _, grading_res = grader.predict(temp_path)
 
                 st.session_state.results = {
                     "stage": stage,
                     "stage_conf": stage_conf,
                     "grading": grading_res,
-                    "img_path": temp_path
+                    "img_path": temp_path,
                 }
                 st.session_state.analysis_done = True
 
-with col_res:
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# ──────────────────────────────────────────────────────────────
+#  RIGHT PANEL — RESULTS
+# ──────────────────────────────────────────────────────────────
+with col_right:
     if st.session_state.analysis_done:
         res = st.session_state.results
 
+        # ── Clinical alert ──
+        if res["grading"] and res["grading"]["low_confidence"]:
+            st.markdown("""
+            <div class="warn-box">
+                ⚠️ LOW CONFIDENCE — AI certainty is below clinical threshold (70%).
+                Manual embryologist review is mandatory before any decision.
+            </div>""", unsafe_allow_html=True)
 
-        # 1. Warning System
-        if res['grading'] and res['grading']['low_confidence']:
-            st.markdown('''
-            <div class="warning-banner">
-                ⚠️ CLINICAL ALERT: Low confidence detection. Prediction requires manual expert verification.
-            </div>
-            ''', unsafe_allow_html=True)
-            
-        st.markdown('<div class="report-container">', unsafe_allow_html=True)
-        
-        st.markdown("### 🔬 Automated Diagnostic Report")
-        st.divider()
-        
-        # Primary Metrics
-        m1, m2, m3 = st.columns(3)
-        
-        with m1:
-            st.markdown(f'''
-            <div class="metric-card">
-                <div class="metric-value">{res['stage']}</div>
-                <div class="metric-label">Developmental Stage</div>
-            </div>
-            ''', unsafe_allow_html=True)
-            
-        with m2:
-            grade_val = res['grading']['full_grade'] if res['grading'] else "N/A"
-            st.markdown(f'''
-            <div class="metric-card">
-                <div class="metric-value">{grade_val}</div>
-                <div class="metric-label">Gardner Grade</div>
-            </div>
-            ''', unsafe_allow_html=True)
-            
-        with m3:
-            conf = res['grading']['confidence'] if res['grading'] else res['stage_conf']
-            st.markdown(f'''
-            <div class="metric-card">
-                <div class="metric-value">{conf:.1%}</div>
-                <div class="metric-label">Aggregate Confidence</div>
-            </div>
-            ''', unsafe_allow_html=True)
-            
-        st.markdown('<div style="margin-top:2rem;"></div>', unsafe_allow_html=True)
-        
-        # Detailed Audit
-        if res['grading']:
-            st.markdown("#### Clinical Morphology Audit")
-            det = res['grading']
-            c1, c2, c3 = st.columns(3)
-            
-            with c1:
-                st.write(f"**Expansion**: {det['expansion']}")
-                st.markdown(f'<div class="conf-bar-bg"><div class="conf-bar-fill" style="width:{det["head_confidences"]["expansion"]*100}%"></div></div>', unsafe_allow_html=True)
-            with c2:
-                st.write(f"**ICM**: {det['icm']}")
-                st.markdown(f'<div class="conf-bar-bg"><div class="conf-bar-fill" style="width:{det["head_confidences"]["icm"]*100}%"></div></div>', unsafe_allow_html=True)
-            with c3:
-                st.write(f"**TE**: {det['te']}")
-                st.markdown(f'<div class="conf-bar-bg"><div class="conf-bar-fill" style="width:{det["head_confidences"]["te"]*100}%"></div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="report-card">', unsafe_allow_html=True)
+        st.markdown('<div class="section-label">🧬 Automated Diagnostic Report</div>', unsafe_allow_html=True)
+
+        # ── Top metric tiles ──
+        t1, t2, t3 = st.columns(3)
+        grade_val = res["grading"]["full_grade"] if res["grading"] else "—"
+        conf_val  = res["grading"]["confidence"] if res["grading"] else res["stage_conf"]
+
+        with t1:
+            st.markdown(f"""
+            <div class="metric-tile">
+                <div class="metric-val">{res['stage'].replace('-', '‑')}</div>
+                <div class="metric-lbl">Developmental Stage</div>
+            </div>""", unsafe_allow_html=True)
+        with t2:
+            st.markdown(f"""
+            <div class="metric-tile">
+                <div class="metric-val">{grade_val}</div>
+                <div class="metric-lbl">Gardner Grade</div>
+            </div>""", unsafe_allow_html=True)
+        with t3:
+            st.markdown(f"""
+            <div class="metric-tile">
+                <div class="metric-val">{conf_val:.0%}</div>
+                <div class="metric-lbl">Aggregate Confidence</div>
+            </div>""", unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # ── Morphology audit (blastocyst only) ──
+        if res["grading"]:
+            st.markdown('<div class="section-label">🔍 Morphology Head Audit</div>', unsafe_allow_html=True)
+            det = res["grading"]
+            hc  = det["head_confidences"]
+            for name, val in [("Expansion Stage", hc["expansion"]), ("ICM Integrity", hc["icm"]), ("TE Integrity", hc["te"])]:
+                st.markdown(f"""
+                <div class="conf-row">
+                    <div class="conf-title"><span>{name}</span><span style="color:#64ffda;font-weight:700">{val:.0%}</span></div>
+                    <div class="conf-track"><div class="conf-fill" style="width:{val*100:.1f}%"></div></div>
+                </div>""", unsafe_allow_html=True)
+            st.markdown(f"""
+            <p style="font-size:0.8rem;color:#8892b0;margin-top:6px;">
+                Expansion: <b style="color:#ccd6f6">{det['expansion']}</b> &nbsp;·&nbsp;
+                ICM: <b style="color:#ccd6f6">{det['icm']}</b> &nbsp;·&nbsp;
+                TE: <b style="color:#ccd6f6">{det['te']}</b>
+            </p>""", unsafe_allow_html=True)
         else:
-            st.info(f"💡 Quality grading is only applicable for Blastocyst stage. Current sample identified as {res['stage']}.")
-            
-        st.divider()
-        st.caption("🛡️ Model Suite: MobileNetV2 (Staging) | EfficientNet-B0 (Grading v4.0)")
-        
+            st.info(f"ℹ️  Gardner grading applies to Blastocysts only. This sample was classified as **{res['stage']}**.")
+
+        st.markdown("<hr>", unsafe_allow_html=True)
+        st.markdown('<p style="font-size:0.72rem;color:#4a5568;">🛡️ Engine: MobileNetV2 Turbo (Staging) &nbsp;|&nbsp; EfficientNet-B0 Supervised (Grading v4.0) &nbsp;|&nbsp; Blasto2K Gold Standard Dataset</p>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
-        
-        # Explainability (Grad-CAM)
-        if st.checkbox("Show AI Focus (Explainability Map)"):
-            classifier = EmbryoClassifier(model_path="embryo_model_turbo.h5")
-            gcam = classifier.get_gradcam(res['img_path'])
-            st.image(gcam, caption="Grad-CAM Heatmap (Focus Areas)", use_container_width=True)
-            
+
+        # ── Grad-CAM ──
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.checkbox("🔥  Show Grad-CAM Explainability Heatmap"):
+            with st.spinner("Generating focus map…"):
+                clf = EmbryoClassifier(model_path="embryo_model_turbo.h5")
+                gcam = clf.get_gradcam(res["img_path"])
+                st.image(gcam, caption="Grad-CAM · Red = AI focus regions", use_container_width=True)
+
     else:
-        st.markdown('''
-        <div style="text-align:center; padding: 5rem; border: 2px dashed rgba(100, 255, 218, 0.1); border-radius: 24px;">
-            <div style="font-size: 4rem; margin-bottom: 1rem;">🔬</div>
-            <div style="color: #8892b0;">Waiting for image upload to begin analysis...</div>
+        st.markdown("""
+        <div style="
+            display:flex; flex-direction:column; align-items:center; justify-content:center;
+            padding: 6rem 2rem;
+            border: 1.5px dashed rgba(100,255,218,0.1);
+            border-radius: 24px;
+            background: rgba(10,25,47,0.3);
+            text-align: center;
+        ">
+            <div style="font-size:3.5rem;margin-bottom:1.2rem;opacity:0.6">🔬</div>
+            <div style="font-size:1.05rem;font-weight:600;color:#ccd6f6;margin-bottom:6px">
+                No Sample Loaded
+            </div>
+            <div style="font-size:0.82rem;color:#4a5568;max-width:320px;line-height:1.6">
+                Upload a microscope image or click one of the <strong style="color:#64ffda">Quick Start</strong> samples on the left to begin analysis.
+            </div>
         </div>
-        ''', unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
-# --- Educational Gallery ---
-st.divider()
-st.markdown("## 📚 Reference Gallery: Examples & Expected Outputs")
-st.markdown("Use this reference guide to understand the AI's grading logic and visual focus areas.")
+# ══════════════════════════════════════════════════════════════
+#  REFERENCE GALLERY
+# ══════════════════════════════════════════════════════════════
+st.markdown("<br><br>", unsafe_allow_html=True)
+st.markdown('<div class="section-label">📚 Reference Gallery · Expected Inputs & Outputs</div>', unsafe_allow_html=True)
 
-g1, g2, g3 = st.columns(3)
-with g1:
-    st.image("sample_images/2_cell_sample.jpeg", use_container_width=True)
-    st.markdown("""
-    **Stage Prediction:** 2-Cell / 4-Cell  
-    **Grading:** N/A (Cleavage stage)  
-    **Explanation:** Early-stage cleavage embryos are evaluated on division symmetry and fragmentation, rather than Gardner criteria.
-    """)
-with g2:
-    st.image("sample_images/blastocyst_good.png", use_container_width=True)
-    st.markdown("""
-    **Stage Prediction:** Blastocyst  
-    **Expected Grading:** 4AA / 5AA (High Quality)  
-    **Explanation:** The AI detects a fully expanded blastocoel with a prominent, tightly packed Inner Cell Mass (ICM) and a cohesive Trophectoderm (TE) layer.
-    """)
-with g3:
-    st.image("sample_images/blastocyst_poor.png", use_container_width=True)
-    st.markdown("""
-    **Stage Prediction:** Blastocyst  
-    **Expected Grading:** 3CC / 4CC (Poor Quality)  
-    **Explanation:** The Grad-CAM heatmap will highlight sparse/loose cells in the ICM and irregular TE cells, resulting in a lower confidence score and 'C' grades.
-    """)
+gallery_data = [
+    {
+        "img": "sample_images/2_cell_sample.jpeg",
+        "stage": "Cleavage Stage",
+        "grade": "N/A",
+        "explain": "Early 2–4 cell embryo. Gardner grading does not apply. The AI evaluates blastomere symmetry and fragmentation levels.",
+    },
+    {
+        "img": "sample_images/morula_sample.jpeg",
+        "stage": "Morula",
+        "grade": "N/A",
+        "explain": "Compact morula (Day 3–4). Cells are tightly compacted. Still pre-blastocyst — Gardner grading is not applicable here.",
+    },
+    {
+        "img": "sample_images/blastocyst_good.png",
+        "stage": "Blastocyst",
+        "grade": "4AA",
+        "explain": "Expanded blastocyst with a large, well-defined ICM and a tightly cohesive TE cell layer. Top-tier implantation candidate.",
+    },
+    {
+        "img": "sample_images/blastocyst_poor.png",
+        "stage": "Blastocyst",
+        "grade": "3CC",
+        "explain": "Partially expanded blastocyst. The ICM appears sparse and the TE cells are loose/irregular — resulting in 'C' quality grades.",
+    },
+]
+
+g1, g2, g3, g4 = st.columns(4)
+for col_widget, item in zip([g1, g2, g3, g4], gallery_data):
+    with col_widget:
+        st.markdown('<div class="gallery-card">', unsafe_allow_html=True)
+        if os.path.exists(item["img"]):
+            st.image(item["img"], use_container_width=True)
+        st.markdown(f'<div class="gallery-stage">{item["stage"]}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="gallery-grade">{item["grade"]}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="gallery-explain">{item["explain"]}</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
