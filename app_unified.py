@@ -248,10 +248,11 @@ for key, val in [('analysis_done', False), ('trigger_scan', False), ('use_sample
         st.session_state[key] = val
 
 SAMPLES = {
-    "btn1": ("sample_images/2_cell_sample.jpeg",   "Cleavage Stage"),
-    "btn2": ("sample_images/morula_sample.jpeg",    "Morula Stage"),
-    "btn3": ("sample_images/blastocyst_good.png",   "Blastocyst · Good"),
-    "btn4": ("sample_images/blastocyst_poor.png",   "Blastocyst · Poor"),
+    "btn1": ("sample_images/2cell_sample.png",       "2-Cell"),
+    "btn2": ("sample_images/4cell_sample.png",       "4-Cell"),
+    "btn3": ("sample_images/8cell_sample.png",       "8-Cell"),
+    "btn4": ("sample_images/morula_sample.png",      "Morula"),
+    "btn5": ("sample_images/blastocyst_sample.png",  "Blastocyst"),
 }
 
 # ══════════════════════════════════════════════════════════════
@@ -267,8 +268,8 @@ with col_left:
 
     # Quick-Start Samples
     st.markdown('<div class="section-label">⚡ Quick Start · Try a Sample</div>', unsafe_allow_html=True)
-    r1, r2, r3, r4 = st.columns(4)
-    for col_widget, (key, (path, label)) in zip([r1, r2, r3, r4], SAMPLES.items()):
+    r1, r2, r3, r4, r5 = st.columns(5)
+    for col_widget, (key, (path, label)) in zip([r1, r2, r3, r4, r5], SAMPLES.items()):
         with col_widget:
             if os.path.exists(path):
                 st.image(path, use_container_width=True)
@@ -423,33 +424,39 @@ st.markdown('<div class="section-label">📚 Reference Gallery · Expected Input
 
 gallery_data = [
     {
-        "img": "sample_images/2_cell_sample.jpeg",
-        "stage": "Cleavage Stage",
+        "img": "sample_images/2cell_sample.png",
+        "stage": "2-Cell Stage",
         "grade": "N/A",
-        "explain": "Early 2–4 cell embryo. Gardner grading does not apply. The AI evaluates blastomere symmetry and fragmentation levels.",
+        "explain": "Earliest cleavage stage. 2 blastomeres visible. Gardner grading does not apply. Model evaluates cell symmetry.",
     },
     {
-        "img": "sample_images/morula_sample.jpeg",
+        "img": "sample_images/4cell_sample.png",
+        "stage": "4-Cell Stage",
+        "grade": "N/A",
+        "explain": "Day 2 embryo with 4 blastomeres. Equal size and minimal fragmentation indicate good developmental potential.",
+    },
+    {
+        "img": "sample_images/8cell_sample.png",
+        "stage": "8-Cell Stage",
+        "grade": "N/A",
+        "explain": "Day 3 cleavage embryo. EGA (embryonic genome activation) begins here. Symmetry is the key quality indicator.",
+    },
+    {
+        "img": "sample_images/morula_sample.png",
         "stage": "Morula",
         "grade": "N/A",
-        "explain": "Compact morula (Day 3–4). Cells are tightly compacted. Still pre-blastocyst — Gardner grading is not applicable here.",
+        "explain": "Day 3–4 compact morula. Cells are tightly compacted. Transition stage before blastocyst formation.",
     },
     {
-        "img": "sample_images/blastocyst_good.png",
+        "img": "sample_images/blastocyst_sample.png",
         "stage": "Blastocyst",
         "grade": "4AA",
-        "explain": "Expanded blastocyst with a large, well-defined ICM and a tightly cohesive TE cell layer. Top-tier implantation candidate.",
-    },
-    {
-        "img": "sample_images/blastocyst_poor.png",
-        "stage": "Blastocyst",
-        "grade": "3CC",
-        "explain": "Partially expanded blastocyst. The ICM appears sparse and the TE cells are loose/irregular — resulting in 'C' quality grades.",
+        "explain": "Day 5–6 expanded blastocyst. Gardner grading applied: Expansion + ICM + TE quality assessed by the AI.",
     },
 ]
 
-g1, g2, g3, g4 = st.columns(4)
-for col_widget, item in zip([g1, g2, g3, g4], gallery_data):
+g1, g2, g3, g4, g5 = st.columns(5)
+for col_widget, item in zip([g1, g2, g3, g4, g5], gallery_data):
     with col_widget:
         st.markdown('<div class="gallery-card">', unsafe_allow_html=True)
         if os.path.exists(item["img"]):
